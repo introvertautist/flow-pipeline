@@ -11,10 +11,15 @@ services:
     image: 'bitnami/kafka:latest'
     ports:
       - '9092:9092'
+      # - '9093:9093'
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_DELETE_TOPIC_ENABLE=true
+      # - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      # - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
+      # - KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT
     restart: always
     depends_on:
       - 'zookeeper'
@@ -25,7 +30,7 @@ services:
     entrypoint: '/bin/bash'
     command: >
       -c "sleep 15 ;
-      kafka-topics.sh --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 2 --topic flows ;"
+      kafka-topics.sh --create --zookeeper zookeeper:2181 --replication-factor 1 --partitions 20 --topic flows ;"
   grafana:
     build: ../grafana
     environment:
@@ -52,6 +57,7 @@ services:
       - '8080:8080'
       - '6343:6343/udp'
       - '2055:2055/udp'
+      - '2056:2056/udp'
     restart: always
     entrypoint: '/bin/sh'
     command: >
@@ -59,6 +65,7 @@ services:
       /goflow -kafka.brokers kafka:9092
       -kafka.topic flows
       -proto.fixedlen=true
+      -loglevel=debug
       "
   db:
     image: yandex/clickhouse-server
@@ -69,3 +76,9 @@ services:
       - ../pb-ext/flow.proto:/var/lib/clickhouse/format_schemas/flow.proto
     depends_on:
       - 'kafka'
+  # inserter:
+  #   build: ../inserter
+  #   ports:
+  #     - 2103:2103
+  #   depends_on:
+  #     - 'kafka'
